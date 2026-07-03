@@ -80,7 +80,36 @@ git ai
 | `NVIDIA_API_KEY`   | **Obligatoria.** API key de NVIDIA.          | —                                          |
 | `NVIDIA_BASE_URL`  | URL base de la API.                          | `https://integrate.api.nvidia.com/v1`      |
 | `COMMIT_IA_MODEL`  | Modelo a usar para generar el commit.        | `z-ai/glm-5.2`                             |
+| `COMMIT_IA_LANG`   | Idioma del mensaje de commit (código ISO 639-1). | `es`                                   |
 | `NO_COLOR`         | Si está definida, desactiva los colores.     | —                                          |
+
+### Idiomas soportados
+
+El mensaje del commit se puede generar en distintos idiomas mediante `COMMIT_IA_LANG`.
+La interfaz del script (mensajes y prompts) siempre está en español; solo cambia el
+idioma del mensaje de commit generado por la IA.
+
+| Código | Idioma     | Código | Idioma     |
+|--------|------------|--------|------------|
+| `es`   | Español    | `ja`   | 日本語     |
+| `en`   | English    | `zh`   | 中文       |
+| `fr`   | Français   | `ru`   | Русский    |
+| `de`   | Deutsch    | `ko`   | 한국어     |
+| `pt`   | Português  | `ar`   | العربية    |
+| `it`   | Italiano   | `nl`   | Nederlands |
+| `pl`   | Polski     | `tr`   | Türkçe     |
+| `hi`   | हिन्दी     |        |            |
+
+También acepta cualquier otro código ISO 639-1 no listado (la IA lo interpretará).
+
+```bash
+# Commit en inglés
+export COMMIT_IA_LANG=en
+git ai
+
+# Commit en francés (solo para esta ejecución)
+COMMIT_IA_LANG=fr git ai
+```
 
 ## Uso
 

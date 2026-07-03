@@ -1,4 +1,4 @@
-# commit-ia
+# git-ai
 
 Extensión de Git CLI que genera mensajes de commit automáticamente usando IA
 (GLM-5.2 a través de la API de NVIDIA). Analiza tu `git diff --cached` y propone
@@ -35,7 +35,8 @@ pip install openai
 
 ### 2. Configurar tu API key
 
-La API key **nunca** se guarda en el código. Se lee de una variable de entorno:
+El script incluye una API key de demostración embebida como *fallback*, pero se
+recomienda usar la tuya propia mediante una variable de entorno:
 
 ```bash
 export NVIDIA_API_KEY="tu-api-key-aqui"
@@ -54,8 +55,8 @@ Git reconoce como subcomandos cualquier ejecutable en el `PATH` cuyo nombre
 empiece por `git-`. Copia (o enlaza) el script con el nombre `git-ai`:
 
 ```bash
-chmod +x commit-ia
-sudo ln -s "$(pwd)/commit-ia" /usr/local/bin/git-ai
+chmod +x git-ai.sh
+sudo ln -s "$(pwd)/git-ai.sh" /usr/local/bin/git-ai
 ```
 
 Ahora puedes usarlo desde cualquier repositorio:
@@ -69,7 +70,7 @@ git ai
 >
 > ```bash
 > mkdir -p ~/.local/bin
-> ln -s "$(pwd)/commit-ia" ~/.local/bin/git-ai
+> ln -s "$(pwd)/git-ai.sh" ~/.local/bin/git-ai
 > # asegúrate de tener ~/.local/bin en el PATH
 > ```
 
@@ -77,7 +78,7 @@ git ai
 
 | Variable           | Descripción                                  | Por defecto                                |
 |--------------------|----------------------------------------------|--------------------------------------------|
-| `NVIDIA_API_KEY`   | **Obligatoria.** API key de NVIDIA.          | —                                          |
+| `NVIDIA_API_KEY`   | API key de NVIDIA. Si no se define, se usa una embebida de demostración. | `nvapi-...` (embebida) |
 | `NVIDIA_BASE_URL`  | URL base de la API.                          | `https://integrate.api.nvidia.com/v1`      |
 | `COMMIT_IA_MODEL`  | Modelo a usar para generar el commit.        | `z-ai/glm-5.2`                             |
 | `COMMIT_IA_LANG`   | Idioma del mensaje de commit (código ISO 639-1). | `es`                                   |

@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+import os
+import sys
+import subprocess
+from openai import OpenAI
+
+# 1. Capturar los cambios en stage (git diff --cached)
+try:
+    diff_result = subprocess.run(
+        ["git", "diff", "--cached"], 
+        capture_output=True, 
+        text=True, 
+        check=True
+    )
+    diff_text = diff_result.stdout.strip()
+except subprocess.CalledProcessError:
+    print("❌ Error: Asegúrate de estar dentro de un repositorio de Git.")
+    sys.exit(1)
+
+if not diff_text:
+    print("❌ No hay archivos en stage. Usa 'git add' primero.")
+    sys.exit(0)
+
+# Configuración de colores para la terminal
+_USE_COLOR = sys.stdout.isatty() and os.getenv("NO_COLOR") is None
+_GREEN_COLOR = "\033[92m" if _USE_COLOR else ""
+_RESET_COLOR = "\033[0m" if _USE_COLOR else ""
+
+# 2. Inicializar cliente de Nvidia
+# La API key y el modelo se leen de variables de entorno para no exponer credenciales.
+_api_key = os.getenv("NVIDIA_API_KEY")
+if not _api_key:
+    print("❌ Falta la variable de entorno NVIDIA_API_KEY con tu API key de NVIDIA.")
+    sys.exit(1)
+
+_base_url = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
+_model = os.getenv("COMMIT_IA_MODEL", "z-ai/glm-5.2")
+
+client = OpenAI(
+    base_url=_base_url,
+    api_key=_api_key
+)
+
+# El prompt del sistema que obliga a GLM a ser súper profesional
+SYSTEM_PROMPT = (
+    "Eres un ingeniero de software experto. Tu tarea es escribir un mensaje de commit de Git "
+    "altamente profesional basado en el 'git diff' proporcionado.\n\n"
+    "Debes usar estrictamente el formato de 'Conventional Commits' (ej. feat(scope): desc, fix(scope): desc, docs(scope): desc).\n"
+    "El mensaje DEBE incluir:\n"
+    "1. Una primera línea concisa (máximo 50 caracteres) en minúsculas.\n"
+    "2. Una línea en blanco.\n"
+    "3. Un cuerpo detallado con viñetas (-) que explique el PORQUÉ del cambio y los impactos técnicos clave.\n\n"
+    "Escribe todo el mensaje en español. Responde ÚNICAMENTE con el mensaje del commit, sin bloques de código de markdown (```), sin introducciones ni saludos."
+)
+
+print(f"🤖 Analizando cambios con {_model}...\n")
+print(f"{_GREEN_COLOR}--- MENSAJE PROPUESTO ---{_RESET_COLOR}")
+
+# 3. Llamada a la API con Streaming
+completion = client.chat.completions.create(
+    model=_model,
+    messages=[
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": f"Aquí está el git diff:\n{diff_text}"}
+    ],
+    temperature=0.2,
+    top_p=1,
+    max_tokens=1024,
+    seed=42,
+    stream=True
+)
+
+commit_message = ""
+
+# Procesar el stream en tiempo real y acumularlo
+for chunk in completion:
+    if not getattr(chunk, "choices", None):
+        continue
+    if len(chunk.choices) == 0 or getattr(chunk.choices[0], "delta", None) is None:
+        continue
+    delta = chunk.choices[0].delta
+    if getattr(delta, "content", None) is not None:
+        content = delta.content
+        print(content, end="", flush=True)
+        commit_message += content
+
+print(f"\n{_GREEN_COLOR}------------------------{_RESET_COLOR}\n")
+
+# 4. Confirmación e inyección en Git
+try:
+    confirm = input("¿Quieres usar este mensaje para el commit? (s/n): ").strip().lower()
+    if confirm == 's':
+        # Ejecutar el commit real pasando el mensaje acumulado
+        commit_exec = subprocess.run(
+            ["git", "commit", "-m", commit_message],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        print(f"\n{_GREEN_COLOR}✔ Successfully committed!{_RESET_COLOR}")
+        print(commit_exec.stdout)
+    else:
+        print("\n❌ Commit cancelado.")
+except subprocess.CalledProcessError as e:
+    print(f"\n❌ Error al ejecutar git commit: {e.stderr}")
+except KeyboardInterrupt:
+    print("\n\n❌ Operación cancelada por el usuario.")

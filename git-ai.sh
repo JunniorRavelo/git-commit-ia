@@ -2,6 +2,7 @@
 import os
 import sys
 import subprocess
+import tempfile
 import httpx
 from openai import OpenAI
 
@@ -59,10 +60,9 @@ SYSTEM_PROMPT = (
     f"Escribe todo el mensaje en {_LANG_NAME}. Responde ÚNICAMENTE con el mensaje del commit, sin bloques de código de markdown (```), sin introducciones ni saludos."
 )
 
-print(f"🤖 Analizando cambios con {_MODEL}...\n")
-print(f"{_GREEN_COLOR}--- MENSAJE PROPUESTO ---{_RESET_COLOR}")
-
-try:
+def generar_commit(diff_text: str) -> str:
+    """Llama a la API y devuelve el mensaje del commit (streaming por stdout)."""
+    print(f"{_GREEN_COLOR}--- MENSAJE PROPUESTO ---{_RESET_COLOR}")
     completion = client.chat.completions.create(
         model=_MODEL,
         messages=[
@@ -87,14 +87,58 @@ try:
             commit_message += content
 
     print(f"\n{_GREEN_COLOR}------------------------{_RESET_COLOR}\n")
+    return commit_message
 
-    confirm = input("¿Quieres usar este mensaje para el commit? (s/n): ").strip().lower()
-    if confirm == 's':
-        commit_exec = subprocess.run(["git", "commit", "-m", commit_message], capture_output=True, text=True, check=True)
-        print(f"\n{_GREEN_COLOR}✔ Successfully committed!{_RESET_COLOR}")
-        print(commit_exec.stdout)
-    else:
-        print("\n❌ Commit cancelado.")
+def editar_commit(mensaje: str) -> str:
+    """Abre $EDITOR (o nano/vim) para que el usuario edite el mensaje."""
+    editor = os.getenv("EDITOR") or os.getenv("VISUAL") or "nano"
+    # Sufijo .txt para que los editores lo traten como texto plano.
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".txt", delete=False, encoding="utf-8"
+    ) as tmp:
+        tmp.write(mensaje)
+        tmp_path = tmp.name
+
+    try:
+        subprocess.run([editor, tmp_path], check=True)
+        with open(tmp_path, "r", encoding="utf-8") as f:
+            nuevo = f.read().strip()
+        return nuevo if nuevo else mensaje
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+try:
+    print(f"🤖 Analizando cambios con {_MODEL}...\n")
+    commit_message = generar_commit(diff_text)
+
+    while True:
+        confirm = input(
+            "¿Quieres usar este mensaje? (s=confirmar / n=cancelar / e=editar / r=regenerar): "
+        ).strip().lower()
+
+        if confirm == 's':
+            commit_exec = subprocess.run(
+                ["git", "commit", "-m", commit_message],
+                capture_output=True, text=True, check=True
+            )
+            print(f"\n{_GREEN_COLOR}✔ Successfully committed!{_RESET_COLOR}")
+            print(commit_exec.stdout)
+            break
+        elif confirm == 'e':
+            commit_message = editar_commit(commit_message)
+            print(f"\n{_GREEN_COLOR}--- MENSAJE EDITADO ---{_RESET_COLOR}")
+            print(commit_message)
+            print(f"{_GREEN_COLOR}------------------------{_RESET_COLOR}\n")
+            # Tras editar, volvemos a preguntar (loop).
+        elif confirm == 'r':
+            print("\n♻️  Regenerando mensaje...\n")
+            commit_message = generar_commit(diff_text)
+        else:
+            print("\n❌ Commit cancelado.")
+            break
 except Exception as e:
     print(f"\n❌ Error de comunicación con la API: {e}")
 except KeyboardInterrupt:

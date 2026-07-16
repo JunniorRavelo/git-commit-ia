@@ -10,7 +10,7 @@ streaming en tiempo real. Si lo aceptas, hace el commit por ti.
 1. Haces `git add` de los archivos que quieres commitear (como siempre).
 2. Ejecutas `git ai` (o `git-ai`).
 3. La IA lee el diff en stage y redacta un mensaje profesional.
-4. Confirmas con `s` y se ejecuta el commit, o lo cancelas con `n`.
+4. Eliges qué hacer: confirmar (`s`), cancelar (`n`), editar (`e`) o regenerar (`r`).
 
 ## Requisitos
 
@@ -133,9 +133,43 @@ feat(auth): agregar validación de token jwt
 
 ------------------------
 
-¿Quieres usar este mensaje para el commit? (s/n): s
+¿Quieres usar este mensaje? (s=confirmar / n=cancelar / e=editar / r=regenerar): s
 ✔ Successfully committed!
 ```
+
+## Opciones del menú
+
+Tras generar el mensaje, el script te pregunta qué hacer. Puedes combinar
+las opciones libremente hasta confirmar o cancelar:
+
+| Opción | Acción                                                                                          |
+|--------|-------------------------------------------------------------------------------------------------|
+| `s`    | **Confirmar.** Hace el commit con el mensaje actual.                                            |
+| `n`    | **Cancelar.** Aborta sin commitear.                                                             |
+| `e`    | **Editar.** Abre tu editor (`$EDITOR`, `$VISUAL` o `nano` por defecto) con el mensaje propuesto para que lo modifiques a mano. Al guardar, se muestra el resultado y se vuelve a preguntar. |
+| `r`    | **Regenerar.** Vuelve a llamar a la IA para obtener un nuevo mensaje a partir del mismo diff.    |
+
+### Editar el mensaje
+
+La opción `e` vuelca el mensaje en un archivo temporal y abre el editor que
+tengas configurado. Si no defines ninguno, se usa `nano`:
+
+```bash
+# Usa vim para editar el mensaje propuesto
+export EDITOR=vim
+
+# O nano (por defecto)
+export EDITOR=nano
+```
+
+Si al guardar dejas el archivo vacío, se conserva el mensaje anterior en
+lugar de hacer un commit vacío.
+
+### Regenerar el mensaje
+
+La opción `r` reutiliza el mismo `git diff --cached` y vuelve a consultar a
+la IA. Útil si la primera propuesta no te convence y quieres otra redacción
+sin tener que cancelar y volver a ejecutar `git ai`.
 
 ## Seguridad
 

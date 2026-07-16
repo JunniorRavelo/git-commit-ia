@@ -1,5 +1,9 @@
 # git-ai
 
+![versión](https://img.shields.io/badge/versión-v1.0.0-blue)
+![licencia](https://img.shields.io/badge/licencia-MIT-green)
+![python](https://img.shields.io/badge/python-3.8+-yellow)
+
 Extensión de Git CLI que genera mensajes de commit automáticamente usando IA
 (GLM-5.2 a través de la API de NVIDIA). Analiza tu `git diff --cached` y propone
 un mensaje siguiendo la convención **Conventional Commits** en español, con
@@ -178,6 +182,40 @@ sin tener que cancelar y volver a ejecutar `git ai`.
 - Si publicas este proyecto, asegúrate de no incluir tu `.env` ni tu
   `~/.bashrc` con la key real.
 
+## Versión
+
+Para consultar la versión instalada:
+
+```bash
+git ai --version
+# o equivalentemente:
+git ai -V
+git ai version
+```
+
+Salida esperada:
+
+```
+git-ai v1.0.0
+```
+
+## Changelog
+
+### v1.0.0
+
+- **feat**: bandera `--version` / `-V` / `version` para consultar la versión del script.
+- **feat**: soporte multi-idioma para el mensaje de commit vía `COMMIT_IA_LANG` (códigos ISO 639-1).
+- **feat**: opciones para **editar** (`e`) y **regenerar** (`r`) el mensaje propuesto antes de confirmar.
+- **feat**: streaming en tiempo real de la respuesta del modelo.
+- **feat**: ampliación del límite de caracteres (250) y tokens (2048) para mensajes de commit más ricos.
+- **security**: la API key de NVIDIA se exige vía `NVIDIA_API_KEY`; se elimina cualquier token embebido del código.
+- **fix**: se ignoran proxies del sistema mal configurados (útil en Debian/Ubuntu) usando `httpx` con `trust_env=False`.
+- **chore**: `.devin/` se ignora y se elimina del historial del repositorio.
+
+### v0.1.0
+
+- Versión inicial: genera un mensaje de commit en formato Conventional Commits a partir de `git diff --cached` usando GLM-5.2 (API de NVIDIA) y lo confirma tras aprobación del usuario.
+
 ## Licencia
 
-MIT
+MIT © 2026 J. Santiago Ravelo

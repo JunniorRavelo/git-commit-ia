@@ -6,6 +6,13 @@ import tempfile
 import httpx
 from openai import OpenAI
 
+__version__ = "1.0.0"
+
+# 0. Manejo de argumentos: --version / -V / version
+if len(sys.argv) > 1 and sys.argv[1] in ("--version", "-V", "version"):
+    print(f"git-ai v{__version__}")
+    sys.exit(0)
+
 # 1. Capturar los cambios en stage (git diff --cached)
 try:
     diff_result = subprocess.run(["git", "diff", "--cached"], capture_output=True, text=True, check=True)

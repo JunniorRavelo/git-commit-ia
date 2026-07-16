@@ -36,9 +36,12 @@ _LANG_NAMES = {
 _LANG_NAME = _LANG_NAMES.get(_LANG, _LANG)  # si no está listado, pasa el código tal cual
 
 # 3. Inicializar cliente ignorando proxies corruptos del sistema
-# La API key se lee de NVIDIA_API_KEY; si no está definida, se usa un valor
-# por defecto embebido (útil para desarrollo, NO recomendado para producción).
-_API_KEY = os.getenv("NVIDIA_API_KEY", "REDACTED-NVIDIA-API-KEY")
+# La API key DEBE proporcionarse vía NVIDIA_API_KEY; no se embebe ningún valor.
+_API_KEY = os.getenv("NVIDIA_API_KEY")
+if not _API_KEY:
+    print("❌ Error: define la variable de entorno NVIDIA_API_KEY antes de ejecutar el script.")
+    print("   Ejemplo: export NVIDIA_API_KEY=\"nvapi-...\"")
+    sys.exit(1)
 client = OpenAI(
     base_url=_BASE_URL,
     api_key=_API_KEY,

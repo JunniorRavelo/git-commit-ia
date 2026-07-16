@@ -35,8 +35,8 @@ pip install openai
 
 ### 2. Configurar tu API key
 
-El script incluye una API key de demostración embebida como *fallback*, pero se
-recomienda usar la tuya propia mediante una variable de entorno:
+El script requiere que proporciones tu propia API key mediante una variable de
+entorno (no se embebe ninguna key en el código):
 
 ```bash
 export NVIDIA_API_KEY="tu-api-key-aqui"
@@ -78,7 +78,7 @@ git ai
 
 | Variable           | Descripción                                  | Por defecto                                |
 |--------------------|----------------------------------------------|--------------------------------------------|
-| `NVIDIA_API_KEY`   | API key de NVIDIA. Si no se define, se usa una embebida de demostración. | `nvapi-...` (embebida) |
+| `NVIDIA_API_KEY`   | **Obligatoria.** API key de NVIDIA.          | —                                          |
 | `NVIDIA_BASE_URL`  | URL base de la API.                          | `https://integrate.api.nvidia.com/v1`      |
 | `COMMIT_IA_MODEL`  | Modelo a usar para generar el commit.        | `z-ai/glm-5.2`                             |
 | `COMMIT_IA_LANG`   | Idioma del mensaje de commit (código ISO 639-1). | `es`                                   |

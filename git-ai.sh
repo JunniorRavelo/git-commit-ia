@@ -54,9 +54,9 @@ SYSTEM_PROMPT = (
     "altamente profesional basado en el 'git diff' proporcionado.\n\n"
     "Debes usar estrictamente el formato de 'Conventional Commits' (ej. feat(scope): desc, fix(scope): desc, docs(scope): desc).\n"
     "El mensaje DEBE incluir:\n"
-    "1. Una primera línea concisa (máximo 50 caracteres) en minúsculas.\n"
+    "1. Una primera línea concisa (máximo 250 caracteres) en minúsculas.\n"
     "2. Una línea en blanco.\n"
-    "3. Un cuerpo detallado con viñetas (-) que explique el PORQUÉ del cambio y los impactos técnicos clave.\n\n"
+    "3. Un cuerpo detallado con viñetas (-) que explique el PORQUÉ del cambio y los impactos técnicos clave a detalle.\n\n"
     f"Escribe todo el mensaje en {_LANG_NAME}. Responde ÚNICAMENTE con el mensaje del commit, sin bloques de código de markdown (```), sin introducciones ni saludos."
 )
 
@@ -71,7 +71,7 @@ def generar_commit(diff_text: str) -> str:
         ],
         temperature=0.2,
         top_p=1,
-        max_tokens=1024,
+        max_tokens=2048,
         seed=42,
         stream=True
     )

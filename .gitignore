@@ -33,3 +33,6 @@ ENV/
 *.log
 *.tmp
 .cache/
+
+# Devin CLI (config local, no debe versionarse)
+.devin/

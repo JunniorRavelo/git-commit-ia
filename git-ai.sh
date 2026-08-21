@@ -7,7 +7,7 @@ from pathlib import Path
 import httpx
 from openai import OpenAI
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 # 0. Archivo de configuración persistente (~/.config/git-ai/config.env)
 #    Se carga antes que nada: las variables de entorno ya definidas tienen prioridad
@@ -94,14 +94,17 @@ def cmd_configure():
     print("\nNota: la variable de entorno manual tiene prioridad sobre el archivo de config.")
     sys.exit(0)
 
-# 0. Manejo de argumentos: --version / -V / version ; -c / configure
-if len(sys.argv) > 1:
-    _arg = sys.argv[1]
+# 0. Manejo de argumentos: --version / -V / version ; -c / configure ; -y / --yes
+#    Se recorre argv completo para que las banderas puedan ir en cualquier orden.
+_AUTO_YES = False
+for _arg in sys.argv[1:]:
     if _arg in ("--version", "-V", "version"):
         print(f"git-ai v{__version__}")
         sys.exit(0)
     if _arg in ("-c", "configure", "--configure"):
         cmd_configure()
+    if _arg in ("-y", "--yes", "yes"):
+        _AUTO_YES = True
 
 # 1. Capturar los cambios en stage (git diff --cached)
 try:
@@ -206,31 +209,40 @@ try:
     print(f"🤖 Analizando cambios con {_MODEL}...\n")
     commit_message = generar_commit(diff_text)
 
-    while True:
-        confirm = input(
-            "¿Quieres usar este mensaje? (s=confirmar / n=cancelar / e=editar / r=regenerar): "
-        ).strip().lower()
+    if _AUTO_YES:
+        # Modo --yes: confirmar automáticamente sin preguntar.
+        commit_exec = subprocess.run(
+            ["git", "commit", "-m", commit_message],
+            capture_output=True, text=True, check=True
+        )
+        print(f"{_GREEN_COLOR}✔ Successfully committed! (--yes){_RESET_COLOR}")
+        print(commit_exec.stdout)
+    else:
+        while True:
+            confirm = input(
+                "¿Quieres usar este mensaje? (s=confirmar / n=cancelar / e=editar / r=regenerar): "
+            ).strip().lower()
 
-        if confirm == 's':
-            commit_exec = subprocess.run(
-                ["git", "commit", "-m", commit_message],
-                capture_output=True, text=True, check=True
-            )
-            print(f"\n{_GREEN_COLOR}✔ Successfully committed!{_RESET_COLOR}")
-            print(commit_exec.stdout)
-            break
-        elif confirm == 'e':
-            commit_message = editar_commit(commit_message)
-            print(f"\n{_GREEN_COLOR}--- MENSAJE EDITADO ---{_RESET_COLOR}")
-            print(commit_message)
-            print(f"{_GREEN_COLOR}------------------------{_RESET_COLOR}\n")
-            # Tras editar, volvemos a preguntar (loop).
-        elif confirm == 'r':
-            print("\n♻️  Regenerando mensaje...\n")
-            commit_message = generar_commit(diff_text)
-        else:
-            print("\n❌ Commit cancelado.")
-            break
+            if confirm == 's':
+                commit_exec = subprocess.run(
+                    ["git", "commit", "-m", commit_message],
+                    capture_output=True, text=True, check=True
+                )
+                print(f"\n{_GREEN_COLOR}✔ Successfully committed!{_RESET_COLOR}")
+                print(commit_exec.stdout)
+                break
+            elif confirm == 'e':
+                commit_message = editar_commit(commit_message)
+                print(f"\n{_GREEN_COLOR}--- MENSAJE EDITADO ---{_RESET_COLOR}")
+                print(commit_message)
+                print(f"{_GREEN_COLOR}------------------------{_RESET_COLOR}\n")
+                # Tras editar, volvemos a preguntar (loop).
+            elif confirm == 'r':
+                print("\n♻️  Regenerando mensaje...\n")
+                commit_message = generar_commit(diff_text)
+            else:
+                print("\n❌ Commit cancelado.")
+                break
 except Exception as e:
     print(f"\n❌ Error de comunicación con la API: {e}")
 except KeyboardInterrupt:

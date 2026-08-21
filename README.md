@@ -1,6 +1,6 @@
 # git-ai
 
-![versión](https://img.shields.io/badge/versión-v1.1.0-blue)
+![versión](https://img.shields.io/badge/versión-v1.2.0-blue)
 ![licencia](https://img.shields.io/badge/licencia-MIT-green)
 ![python](https://img.shields.io/badge/python-3.8+-yellow)
 
@@ -154,6 +154,15 @@ git add <archivos>
 git ai
 ```
 
+Para aceptar automáticamente el mensaje propuesto sin confirmación interactiva
+(útil en scripts o cuando confías en la propuesta de la IA):
+
+```bash
+git ai -y
+# o equivalentemente:
+git ai --yes
+```
+
 Ejemplo de salida:
 
 ```
@@ -171,6 +180,9 @@ feat(auth): agregar validación de token jwt
 ¿Quieres usar este mensaje? (s=confirmar / n=cancelar / e=editar / r=regenerar): s
 ✔ Successfully committed!
 ```
+
+Con `-y` el commit se realiza directamente tras generar el mensaje, sin mostrar
+el prompt de confirmación.
 
 ## Opciones del menú
 
@@ -227,10 +239,15 @@ git ai version
 Salida esperada:
 
 ```
-git-ai v1.1.0
+git-ai v1.2.0
 ```
 
 ## Changelog
+
+### v1.2.0
+
+- **feat**: bandera `git ai -y` / `git ai --yes` para aceptar automáticamente el mensaje propuesto y hacer el commit sin prompt de confirmación.
+- **refactor**: el parseo de argumentos ahora recorre `argv` completo, por lo que las banderas pueden ir en cualquier orden (ej. `git ai -y`, `git ai --yes`).
 
 ### v1.1.0
 

@@ -1,11 +1,11 @@
 # git-ai
 
-![versión](https://img.shields.io/badge/versión-v1.0.0-blue)
+![versión](https://img.shields.io/badge/versión-v1.1.0-blue)
 ![licencia](https://img.shields.io/badge/licencia-MIT-green)
 ![python](https://img.shields.io/badge/python-3.8+-yellow)
 
 Extensión de Git CLI que genera mensajes de commit automáticamente usando IA
-(GLM-5.2 a través de la API de NVIDIA). Analiza tu `git diff --cached` y propone
+(a través de la API de NVIDIA build). Analiza tu `git diff --cached` y propone
 un mensaje siguiendo la convención **Conventional Commits** en español, con
 streaming en tiempo real. Si lo aceptas, hace el commit por ti.
 
@@ -84,9 +84,13 @@ git ai
 |--------------------|----------------------------------------------|--------------------------------------------|
 | `NVIDIA_API_KEY`   | **Obligatoria.** API key de NVIDIA.          | —                                          |
 | `NVIDIA_BASE_URL`  | URL base de la API.                          | `https://integrate.api.nvidia.com/v1`      |
-| `COMMIT_IA_MODEL`  | Modelo a usar para generar el commit.        | `z-ai/glm-5.2`                             |
+| `COMMIT_IA_MODEL`  | Modelo a usar para generar el commit.        | `deepseek-ai/deepseek-v4-flash-0731`       |
 | `COMMIT_IA_LANG`   | Idioma del mensaje de commit (código ISO 639-1). | `es`                                   |
 | `NO_COLOR`         | Si está definida, desactiva los colores.     | —                                          |
+| `GIT_AI_CONFIG_DIR`| Directorio del archivo de config persistente. | `~/.config/git-ai`                         |
+
+> Orden de prioridad para `COMMIT_IA_MODEL`: variable de entorno (manual) > archivo de
+> config (`~/.config/git-ai/config.env`, escrito por `git ai -c`) > valor por defecto.
 
 ### Idiomas soportados
 
@@ -116,6 +120,33 @@ git ai
 COMMIT_IA_LANG=fr git ai
 ```
 
+## Configuración de modelo (`git ai -c`)
+
+Para ver los modelos gratuitos disponibles en NVIDIA build API y elegir cuál usar:
+
+```bash
+git ai -c
+# o equivalentemente:
+git ai configure
+```
+
+Se muestra un listado con los modelos disponibles (verificados el 2026-08-21):
+
+| # | Modelo                              | Tipo                                          |
+|---|-------------------------------------|-----------------------------------------------|
+| 1 | `deepseek-ai/deepseek-v4-flash-0731` | 284B MoE (13B activos). Coding/agentic. 1M ctx. |
+| 2 | `meta/muse-glimmer-30b`             | 29.6B multimodal con reasoning. 131K ctx.      |
+| 3 | `poolside/laguna-xs-2.1`            | 33B MoE (3B activos). Agentic coding. 262K ctx.|
+| 4 | `minimaxai/minimax-m3`              | 428B MoE multimodal. Reasoning/coding. 1M ctx. |
+
+Al seleccionar uno por número, la elección se **guarda automáticamente** en
+`~/.config/git-ai/config.env` y se usa en adelante. Además se imprime el comando
+`export COMMIT_IA_MODEL=...` por si quieres replicarlo a mano en tu `~/.bashrc`
+(la variable de entorno manual tiene prioridad sobre el archivo de config).
+
+> ℹ️ `z-ai/glm-5.2` quedó fuera de servicio (EOL) el 2026-08-21 y por eso ya no
+> se incluye; el default pasó a `deepseek-ai/deepseek-v4-flash-0731`.
+
 ## Uso
 
 ```bash
@@ -126,7 +157,7 @@ git ai
 Ejemplo de salida:
 
 ```
-🤖 Analizando cambios con z-ai/glm-5.2...
+🤖 Analizando cambios con deepseek-ai/deepseek-v4-flash-0731...
 
 --- MENSAJE PROPUESTO ---
 feat(auth): agregar validación de token jwt
@@ -196,10 +227,17 @@ git ai version
 Salida esperada:
 
 ```
-git-ai v1.0.0
+git-ai v1.1.0
 ```
 
 ## Changelog
+
+### v1.1.0
+
+- **feat**: bandera `git ai -c` / `git ai configure` para listar los modelos gratuitos disponibles en NVIDIA build API y elegir el activo.
+- **feat**: persistencia de la configuración en `~/.config/git-ai/config.env` (cargado automáticamente al iniciar; la variable de entorno manual tiene prioridad).
+- **breaking**: el modelo por defecto pasa de `z-ai/glm-5.2` (EOL 2026-08-21) a `deepseek-ai/deepseek-v4-flash-0731`.
+- **docs**: documentación de los modelos disponibles y del orden de prioridad de `COMMIT_IA_MODEL`.
 
 ### v1.0.0
 

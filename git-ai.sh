@@ -3,15 +3,105 @@ import os
 import sys
 import subprocess
 import tempfile
+from pathlib import Path
 import httpx
 from openai import OpenAI
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
-# 0. Manejo de argumentos: --version / -V / version
-if len(sys.argv) > 1 and sys.argv[1] in ("--version", "-V", "version"):
-    print(f"git-ai v{__version__}")
+# 0. Archivo de configuración persistente (~/.config/git-ai/config.env)
+#    Se carga antes que nada: las variables de entorno ya definidas tienen prioridad
+#    sobre el archivo, así funciona tanto de forma automática como manual.
+_CONFIG_DIR = Path(os.getenv("GIT_AI_CONFIG_DIR", os.path.expanduser("~/.config/git-ai")))
+_CONFIG_FILE = _CONFIG_DIR / "config.env"
+
+def _load_config_file():
+    """Carga variables desde el archivo de config. No sobrescribe vars ya definidas en el entorno."""
+    if not _CONFIG_FILE.is_file():
+        return
+    for line in _CONFIG_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+_load_config_file()
+
+# Modelos gratuitos disponibles en NVIDIA build API (verificados 2026-08-21)
+_AVAILABLE_MODELS = [
+    {
+        "id": "deepseek-ai/deepseek-v4-flash-0731",
+        "name": "DeepSeek V4 Flash 0731",
+        "desc": "284B MoE (13B activos). Optimizado para coding, chat y agentic. 1M tokens de contexto.",
+        "url": "https://build.nvidia.com/deepseek-ai/deepseek-v4-flash-0731",
+    },
+    {
+        "id": "meta/muse-glimmer-30b",
+        "name": "Muse Glimmer 30B",
+        "desc": "29.6B multimodal (texto+imagen) con reasoning y tool-calling. 131K contexto.",
+        "url": "https://build.nvidia.com/meta/muse-glimmer-30b",
+    },
+    {
+        "id": "poolside/laguna-xs-2.1",
+        "name": "Laguna XS 2.1",
+        "desc": "33B MoE (3B activos). Agentic coding y tareas de terminal. 262K contexto.",
+        "url": "https://build.nvidia.com/poolside/laguna-xs-2.1",
+    },
+    {
+        "id": "minimaxai/minimax-m3",
+        "name": "MiniMax M3",
+        "desc": "428B MoE multimodal (texto/imagen/video). Reasoning, coding y tool-calling. 1M contexto.",
+        "url": "https://build.nvidia.com/minimaxai/minimax-m3",
+    },
+]
+
+# Configuración desde variables de entorno (con defaults)
+_BASE_URL = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
+_MODEL = os.getenv("COMMIT_IA_MODEL", "deepseek-ai/deepseek-v4-flash-0731")
+_LANG = os.getenv("COMMIT_IA_LANG", "es")
+
+def cmd_configure():
+    """Muestra los modelos gratuitos disponibles y permite elegir/guardar el activo."""
+    print(f"git-ai v{__version__} — Configuración de modelo\n")
+    print("Modelos gratuitos disponibles en NVIDIA build API:\n")
+    for i, m in enumerate(_AVAILABLE_MODELS, 1):
+        marker = "  (actual)" if m["id"] == _MODEL else ""
+        print(f"  {i}. {m['name']}{marker}")
+        print(f"     id:   {m['id']}")
+        print(f"     {m['desc']}")
+        print(f"     {m['url']}\n")
+    while True:
+        sel = input("Selecciona un modelo por número (o 'q' para salir sin guardar): ").strip().lower()
+        if sel in ("q", "quit", "exit", ""):
+            print("No se guardaron cambios.")
+            sys.exit(0)
+        try:
+            chosen = _AVAILABLE_MODELS[int(sel) - 1]
+        except (ValueError, IndexError):
+            print("❌ Selección inválida. Intenta de nuevo.")
+            continue
+        break
+    _CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    _CONFIG_FILE.write_text(f'COMMIT_IA_MODEL="{chosen["id"]}"\n', encoding="utf-8")
+    print(f"\n✔ Modelo guardado en {_CONFIG_FILE}")
+    print(f'  COMMIT_IA_MODEL="{chosen["id"]}"')
+    print("\nPara usarlo manualmente (ej. en ~/.bashrc), añade:")
+    print(f'  export COMMIT_IA_MODEL="{chosen["id"]}"')
+    print("\nNota: la variable de entorno manual tiene prioridad sobre el archivo de config.")
     sys.exit(0)
+
+# 0. Manejo de argumentos: --version / -V / version ; -c / configure
+if len(sys.argv) > 1:
+    _arg = sys.argv[1]
+    if _arg in ("--version", "-V", "version"):
+        print(f"git-ai v{__version__}")
+        sys.exit(0)
+    if _arg in ("-c", "configure", "--configure"):
+        cmd_configure()
 
 # 1. Capturar los cambios en stage (git diff --cached)
 try:
@@ -29,12 +119,7 @@ _USE_COLOR = sys.stdout.isatty() and os.getenv("NO_COLOR") is None
 _GREEN_COLOR = "\033[92m" if _USE_COLOR else ""
 _RESET_COLOR = "\033[0m" if _USE_COLOR else ""
 
-# 2. Configuración desde variables de entorno (con defaults)
-_BASE_URL = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
-_MODEL = os.getenv("COMMIT_IA_MODEL", "z-ai/glm-5.2")
-_LANG = os.getenv("COMMIT_IA_LANG", "es")
-
-# Mapa de códigos ISO 639-1 -> nombre del idioma (para el prompt)
+# 2. Mapa de códigos ISO 639-1 -> nombre del idioma (para el prompt)
 _LANG_NAMES = {
     "es": "español", "en": "English", "fr": "français", "de": "Deutsch",
     "pt": "português", "it": "italiano", "pl": "polski", "hi": "हिन्दी",
